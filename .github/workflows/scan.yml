@@ -1,0 +1,39 @@
+name: Auto Scan IPTV Channels
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # 每天北京时间早上 8:00 自动运行
+  workflow_dispatch: # 允许手动触发运行
+
+jobs:
+  scan_and_update:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install aiohttp
+
+    - name: Run Scanner Script
+      run: python scanner.py
+
+    - name: Commit and Push M3U File
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        if [ -n "$(git status --porcelain live.m3u)" ]; then
+          git add live.m3u
+          git commit -m "自动更新：清洗最新有效直播源链接"
+          git push
+        else
+          echo "无变动，跳过提交。"
+        fi
