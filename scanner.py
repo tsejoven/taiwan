@@ -2,7 +2,7 @@ import os
 
 # ================= 配置参数 =================
 # 基于你提供的最新格式：http://4t.537224.xyz/live/4gtv-4gtv045
-BASE_URL = "http://4t.537224.xyz/live/4gtv-4gtv"
+BASE_URL = "http://4.537224.xyz/live/4gtv-4gtv"
 START_NUM = 1
 END_NUM = 100
 OUTPUT_FILE = "live.m3u"
