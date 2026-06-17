@@ -1,46 +1,53 @@
-import os
+import subprocess
+import concurrent.futures
 
-# ================= 配置参数 =================
-# 基于你提供的最新格式：http://4t.537224.xyz/live/4gtv-4gtv045
-BASE_URL = "rtmp://f13h.mine.nu/sat/tv"
-START_NUM = 001
-END_NUM = 999
-OUTPUT_FILE = "live.m3u"
-
-# 已知常见频道的中文名称映射（没配的名字会自动显示为“四季频道-XXX”）
-CHANNEL_MAP = {
-    2: "民视无线台",
-    31: "民视新闻台",
-    39: "八大综合",
-    40: "中视",
-    41: "华视",
-    42: "台视",
-    43: "公视",
-    45: "华视新闻台",  # 基于你提供的045测试
-    83: "TVBS新闻",
-}
+def check_rtmp_source(num):
+    """
+    使用 ffprobe 對 RTMP 流進行超時探測
+    """
+    tv_number = f"{num:03d}"
+    url = f"rtmp://f13.mine.nu/sat/tv{tv_number}"
+    
+    # 呼叫 ffprobe 獲取流資訊，設定 5 秒超時
+    cmd = [
+        "ffprobe", 
+        "-v", "error", 
+        "-show_entries", "format=format_name", 
+        "-of", "default=noprint_wrappers=1:nokey=1", 
+        "-timeout", "5000000",  # 5,000,000 微秒 = 5 秒
+        url
+    ]
+    
+    try:
+        # 執行命令
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=6)
+        if result.returncode == 0:
+            print(print(f"✅ 發現可用頻道: tv{tv_number}"))
+            return f"盲测频道 tv{tv_number},{url}\n"
+    except Exception:
+        pass
+    return None
 
 def main():
-    print(f"正在基于全新格式批量生成 001 到 {END_NUM:999} 的直播源地址...")
+    print("🚀 開始並行盲測 rtmp://f13.mine.nu/sat/tv001 - tv999 ...")
+    valid_channels = []
     
-    lines = []
-    for num in range(START_NUM, END_NUM + 1):
-        # 补零成 3 位数，如 1 变成 001，45 变成 045
-        num_str = f"{num:03d}"
+    # 建立一個擁有 30 個並行執行緒的執行緒池（防止 GitHub 被封禁，同時保持高效）
+    with concurrent.futures.ThreadPoolExecutor(max_workers=30) as executor:
+        # 投放 1 到 999 的掃描任務
+        futures = {executor.submit(check_rtmp_source, i): i for i in range(1, 1000)}
         
-        # 拼接出标准的频道名称和资源链接
-        name = CHANNEL_MAP.get(num, f"四季频道-{num_str}")
-        url = f"{BASE_URL}{num_str}"
-        
-        # 组合成你要求的“名字,链接”格式
-        lines.append(f"{name},{url}")
+        for future in concurrent.futures.as_completed(futures):
+            res = future.result()
+            if res:
+                valid_channels.append(res)
 
-    # 写入 live.m3u 文件
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        for line in lines:
-            f.write(f"{line}\n")
-            
-    print(f"跑完了！已成功将 {len(lines)} 个频道写入 {OUTPUT_FILE}。")
+    # 將所有存活的有效源寫入檔案
+    valid_channels.sort()  # 按序排列
+    with open("valid_rtmp.txt", "w", encoding="utf-8") as f:
+        f.writelines(valid_channels)
+        
+    print(f"\n🎉 掃描完成！共發現 {len(valid_channels)} 個可用頻道，已寫入 valid_rtmp.txt")
 
 if __name__ == "__main__":
     main()
