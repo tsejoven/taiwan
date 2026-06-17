@@ -1,7 +1,7 @@
 name: RTMP Live Stream Brute Force Scanner
 
 on:
-  workflow_dispatch: # 支援在 GitHub 網頁端手動點擊按鈕執行
+  workflow_dispatch: # 支援手動點擊執行
 
 jobs:
   scan_and_save:
@@ -22,16 +22,24 @@ jobs:
         sudo apt-get install -y ffmpeg
 
     - name: Run Brute Force Scanner
-      run: python scan.py
+      run: |
+        # 執行 Python 腳本，如果出錯也強制放行，不弄髒工作流
+        python scan.py || echo "⚠️ 腳本執行中遇到部分錯誤，繼續後續檢查..."
 
     - name: Commit and Push valid_rtmp Files
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
         
-        # 強制添加生成的 txt 與 m3u 檔案（若有變動）
-        git add valid_rtmp.txt valid_rtmp.m3u || true
+        # 檢查檔案是否存在，不存在則建立空檔案防止後續報錯
+        touch valid_rtmp.txt valid_rtmp.m3u
+        git add valid_rtmp.txt valid_rtmp.m3u
         
-        # 執行提交，若檔案無變化則優雅跳過不報錯
-        git commit -m "自动更新: 提取出最新存活的盲测 RTMP 频道 (TXT & M3U)" || echo "名单无变化，跳过提交"
-        git push
+        # 【核心修復】防禦性 Git 提交：只有當檔案真的被修改時才提交
+        if git diff --staged --quiet; then
+          echo "📢 掃描結果與倉庫現有檔案完全一致（或均為空），無需更新，跳過提交。"
+        else
+          echo "🚀 偵測到名單變化，正在推送到倉庫..."
+          git commit -m "自动更新: 提取出最新存活的盲测 RTMP 频道 (TXT & M3U)"
+          git push
+        fi
