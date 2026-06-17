@@ -1,14 +1,10 @@
-name: Auto Scan IPTV Channels
+name: RTMP Live Stream Brute Force Scanner
 
 on:
-  schedule:
-    # 每天北京时间早上 8:00 自动运行一次 (UTC 0:00)
-    - cron: '0 0 * * *'
-  workflow_dispatch:
-    # 允许你在 GitHub 页面上手动点击按钮触发运行
+  workflow_dispatch: # 支援在 GitHub 網頁端手動點擊按鈕執行
 
 jobs:
-  scan_and_update:
+  scan_and_save:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,25 +16,22 @@ jobs:
       with:
         python-version: '3.10'
 
-    - name: Install Dependencies
+    - name: Install Network Discovery Tools
       run: |
-        python -m pip install --upgrade pip
-        # 安装 requests 库，用于在脚本中联网获取最新的动态台标映射表
-        pip install requests
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg
 
-    - name: Run Scanner Script
-      run: python scanner.py
+    - name: Run Brute Force Scanner
+      run: python scan.py
 
-    - name: Commit and Push M3U File
+    - name: Commit and Push valid_rtmp.txt
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
         
-        # 检查 live.m3u 文件是否有变动，避免无意义的重复提交
-        if [ -n "$(git status --porcelain live.m3u)" ]; then
-          git add live.m3u
-          git commit -m "自动更新：获取最新动态台标并生成四季源"
+        # 檢查是否有產出有效檔案，若有則提交
+        if [ -f valid_rtmp.txt ]; then
+          git add valid_rtmp.txt
+          git commit -m "自动更新: 提取出最新存活的盲测 RTMP 頻道" || echo "名單無變化，跳過提交"
           git push
-        else
-          echo "直播源链接无变动，跳过本次提交。"
         fi
