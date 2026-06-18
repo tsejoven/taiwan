@@ -6,7 +6,7 @@ def check_rtmp_source(num):
     使用 ffprobe 對 RTMP 流進行超時探測
     """
     tv_number = f"{num:03d}"
-    url = f"rtmp://f13.mine.nu/sat/tv{tv_number}"
+    url = f"rtmp://f13h.mine.nu/sat/tv{tv_number}"
     
     # 呼叫 ffprobe 獲取流資訊，設定 5 秒超時
     cmd = [
@@ -28,7 +28,7 @@ def check_rtmp_source(num):
     return None
 
 def main():
-    print("🚀 開始並行盲測 rtmp://f13.mine.nu/sat/tv001 - tv999 ...")
+    print("🚀 開始並行盲測 rtmp://f13h.mine.nu/sat/tv001 - tv999 ...")
     valid_list = []
     
     # 使用 30 執行緒並行掃描
